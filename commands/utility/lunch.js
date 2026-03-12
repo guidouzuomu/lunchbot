@@ -3,7 +3,7 @@ import fs from 'fs';
 import 'dotenv/config';
 
 
-export const data = new SlashCommandBuilder().setName('lunch').setDescription('provide randam puckup restrant!');
+export const data = new SlashCommandBuilder().setName('lunch').setDescription('Provide a random restaurant pick!');
 
 export async function execute(interaction) {
     await interaction.reply('検索中');
