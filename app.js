@@ -1,8 +1,12 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const { Client, Collection, GatewayIntentBits } = require('discord.js');
-const { token } = require('./config.json');
-const { cooldown } = require('./commands/utility/ping');
+import fs from 'node:fs';
+import path from 'node:path';
+import { Client, Collection, GatewayIntentBits } from 'discord.js';
+import configData from './config.json' with { type: "json" };
+import { fileURLToPath } from 'node:url';
+
+const token = configData.default ? configData.default.token : configData.token;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.cooldowns = new Collection();
@@ -16,7 +20,8 @@ for (const folder of commandFolders) {
     const commandFiles = fs.readdirSync(commandsPath).filter((file) => file.endsWith('.js'));
     for (const file of commandFiles) {
         const filePath = path.join(commandsPath, file);
-        const command = require(filePath);
+        const fileUrl = `file://${filePath}`;
+        const command = await import(fileUrl);
         if ('data' in command && 'execute' in command) {
             client.commands.set(command.data.name, command);
         } else {
@@ -30,7 +35,9 @@ const eventFiles = fs.readdirSync(eventsPath).filter((file) => file.endsWith('.j
 
 for (const file of eventFiles) {
     const filePath = path.join(eventsPath, file);
-    const event = require(filePath);
+    const fileUrl = `file://${filePath}`;
+    const event = await import(fileUrl);
+
     if (event.once) {
         client.once(event.name, (...args) => event.execute(...args));
     } else {

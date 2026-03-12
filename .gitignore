@@ -142,3 +142,4 @@ vite.config.ts.timestamp-*
 node_modules
 .env
 config.json
+test.js
