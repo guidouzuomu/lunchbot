@@ -99,7 +99,7 @@ export async function execute(interaction) {
             }
 
 
-            const url = `https://webservice.recruit.co.jp/hotpepper/gourmet/v1/?key=${process.env.API_KEY}&small_area=${userSelect}&format=json`
+            const url = `https://webservice.recruit.co.jp/hotpepper/gourmet/v1/?key=${process.env.API_KEY}&small_area=${userSelect}&format=json`;
 
             const response = await fetch(url);
             const data = await response.json();
