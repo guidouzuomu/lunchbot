@@ -138,7 +138,7 @@ export async function execute(interaction) {
                 })
 
             } catch (e) {
-                console.error(error);
+                console.error(e);
                 await interaction.reply({ content: '検索中にエラーが起きました💦', flags: MessageFlags.Ephemeral });
             }
         }
