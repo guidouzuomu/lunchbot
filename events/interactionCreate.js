@@ -1,9 +1,43 @@
 import { Events, Collection, MessageFlags, EmbedBuilder } from 'discord.js';
-import { SlashCommandBuilder, ContainerBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ActionRowBuilder, ButtonStyle } from 'discord.js';
-import fs from 'fs';
 import 'dotenv/config';
 
-const userSelectArea = new Map();
+class ExpiringMap extends Map {
+    constructor(timeToAlive, entries) {
+        super(entries);
+        this.timeToAlive = timeToAlive;
+        this._timeouts = new Map();
+    }
+
+    set(key, value) {
+        if (this._timeouts.has(key)) {
+            clearTimeout(this._timeouts.get(key));
+        }
+        const timeout = setTimeout(() => {
+            super.delete(key);
+            this._timeouts.delete(key);
+        }, this.timeToAlive);
+        this._timeouts.set(key, timeout);
+        return super.set(key, value);
+    }
+
+    delete(key) {
+        if (this._timeouts.has(key)) {
+            clearTimeout(this._timeouts.get(key));
+            this._timeouts.delete(key);
+        }
+        return super.delete(key);
+    }
+
+    clear() {
+        for (const timeout of this._timeouts.values()) {
+            clearTimeout(timeout);
+        }
+        this._timeouts.clear();
+        return super.clear();
+    }
+}
+
+const userSelectArea = new ExpiringMap(180_000);
 
 export const name = Events.InteractionCreate;
 export async function execute(interaction) {
@@ -14,22 +48,6 @@ export async function execute(interaction) {
             console.error(`No command matching ${interaction.commandName} was found.`);
             return;
         }
-
-        // if (interaction.isAutocomplete()) {
-        //     if (!command) {
-        //         console.error(`No command matching ${interaction.commandName} was found.`);
-        //         return;
-        //     }
-        //     try {
-        //         await command.autocomplete(interaction);
-        //     } catch (error) {
-        //         console.error(error);
-        //     }
-        // }
-
-        // if (interaction.isUserContextMenuCommand()) {
-        //     // ここでコマンドを呼び出す
-        // }
 
         const { cooldowns } = interaction.client;
         if (!cooldowns.has(command.data.name)) {
@@ -70,19 +88,6 @@ export async function execute(interaction) {
             }
         }
 
-
-        // } else if (interaction.isModalSubmit()) {
-        //     if (interaction.customId === 'myModal') {
-        //         await interaction.reply({ content: 'Your submission was received successfully!' });
-        //         // Get the data entered by the user
-        //         // const pong=interaction.fields.getTextInputValue('pong');
-        //         // const hobbies = interaction.fields.getTextInputValue('hobbiesInput');
-        //         const starter = interaction.fields.getStringSelectValues('starter');
-        //         // const picture = interaction.fields.getUploadedFiles('picture');
-        //         // console.log({ pong,hobbies, starter, picture });
-        //         console.log({ starter });
-
-        //     }
     } else if (interaction.isStringSelectMenu()) {
         if (interaction.customId === 'area') {
             userSelectArea.set(interaction.user.id, interaction.values[0]);
@@ -90,6 +95,7 @@ export async function execute(interaction) {
             console.log(interaction.values[0]);
             return;
         }
+
     } else if (interaction.isButton()) {
         if (interaction.customId === 'send') {
             const userSelect = userSelectArea.get(interaction.user.id);
@@ -100,48 +106,41 @@ export async function execute(interaction) {
 
 
             const url = `https://webservice.recruit.co.jp/hotpepper/gourmet/v1/?key=${process.env.API_KEY}&small_area=${userSelect}&format=json`
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    return await interaction.reply('もう一度お試し下さい');
+                }
+                const data = await response.json();
 
-            const response = await fetch(url);
-            const data = await response.json();
+                const randomIndex = Math.floor(Math.random() * data.results.shop.length);
+                const description1 = data.results.shop[randomIndex].shop_detail_memo || '';
+                const description2 = data.results.shop[randomIndex].close || '';
 
-            const randomIndex = Math.floor(Math.random() * data.results.shop.length);
-            const description1 = data.results.shop[randomIndex].shop_detail_memo || '';
-            const description2 = data.results.shop[randomIndex].close || '';
+                const replyEmbed = new EmbedBuilder()
+                    .setAuthor({
+                        name: 'Powered by ホットペッパーグルメ Webサービス',
+                        url: 'http://webservice.recruit.co.jp/'
+                    })
+                    .setColor(0x0099ff)
+                    .setTitle(data.results.shop[randomIndex].name)
+                    .setImage(data.results.shop[randomIndex].logo_image)
+                    .setDescription('定休日:' + data.results.shop[randomIndex].close + '\n' + data.results.shop[randomIndex].shop_detail_memo)
+                    .setURL(data.results.shop[randomIndex].urls.pc)
+                    .setFooter({ text: '画像提供：ホットペッパー グルメ' });
 
-            const description = description1 + description2;
-            const replyEmbed = new EmbedBuilder()
-                .setAuthor({
-                    name: 'Powered by ホットペッパーグルメ Webサービス',
-                    url: 'http://webservice.recruit.co.jp/'
+                console.log('name:' + data.results.shop[randomIndex].name + '\n shopmemo:' + data.results.shop[randomIndex].shop_detail_memo +
+                    '\n close:' + data.results.shop[randomIndex].close
+                );
+
+                await interaction.reply({
+                    embeds: [replyEmbed]
                 })
-                .setColor(0x0099ff)
-                .setTitle(data.results.shop[randomIndex].name)
-                .setImage(data.results.shop[randomIndex].logo_image)
-                .setDescription('定休日:' + data.results.shop[randomIndex].close + '\n' + data.results.shop[randomIndex].shop_detail_memo)
-                .setURL(data.results.shop[randomIndex].urls.pc)
-                .setFooter({ text: '画像提供：ホットペッパー グルメ' });
 
-            console.log('name:' + data.results.shop[randomIndex].name + '\n shopmemo:' + data.results.shop[randomIndex].shop_detail_memo +
-                '\n close:' + data.results.shop[randomIndex].close
-            );
-
-            await interaction.reply({
-                embeds: [replyEmbed]
-            })
+            } catch (e) {
+                console.error(error);
+                await interaction.reply({ content: '検索中にエラーが起きました💦', flags: MessageFlags.Ephemeral });
+            }
         }
     }
 }
-// }else if (interaction.isUserSelectMenu()) {
-//     if (interaction.customId === 'users') {
-//         // 選択されたユーザーたちのIDを取得
-//         const userIds = interaction.values;
-//         // メンション形式にして表示
-//         const mentions = userIds.map(id => `<@${id}>`).join(', ');
-
-//         await interaction.reply({
-//             content: `選択されたユーザー: ${mentions}`,
-//             flags: MessageFlags.Ephemeral
-//         });
-//     }
-// }
-
