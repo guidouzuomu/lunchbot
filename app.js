@@ -1,11 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Client, Collection, GatewayIntentBits } from 'discord.js';
-import configData from './config.json' with { type: "json" };
-import { fileURLToPath } from 'node:url';
+import 'dotenv/config';
+import { fileURLToPath } from 'url';
 
-const token = configData.default ? configData.default.token : configData.token;
+
+
+const clientId = process.env.CLIENT_ID;
+const guildId = process.env.GUILD_ID;
+const token = process.env.DISCORD_TOKEN;
 const __filename = fileURLToPath(import.meta.url);
+
 const __dirname = path.dirname(__filename);
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
