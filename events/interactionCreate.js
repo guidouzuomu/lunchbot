@@ -93,7 +93,7 @@ export async function execute(interaction) {
         if (interaction.customId === 'area') {
             userSelectArea.set(interaction.user.id, interaction.values[0]);
             await interaction.deferUpdate();
-            return ;
+            return;
         }
 
     } else if (interaction.isButton()) {
