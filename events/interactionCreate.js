@@ -1,4 +1,4 @@
-import { Events, Collection, MessageFlags, EmbedBuilder } from 'discord.js';
+import { Events, Collection, MessageFlags } from 'discord.js';
 import 'dotenv/config';
 import { handleSendButton } from '../interactions/sendButton.js';
 
