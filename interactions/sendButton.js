@@ -1,4 +1,4 @@
-import { Events, Collection, MessageFlags, EmbedBuilder } from 'discord.js';
+import { MessageFlags, EmbedBuilder } from 'discord.js';
 import 'dotenv/config';
 
 
