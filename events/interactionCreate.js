@@ -1,5 +1,6 @@
 import { Events, Collection, MessageFlags, EmbedBuilder } from 'discord.js';
 import 'dotenv/config';
+import { handleSendButton } from '../interactions/sendButton.js';
 
 class ExpiringMap extends Map {
     constructor(timeToAlive, entries) {
@@ -92,55 +93,10 @@ export async function execute(interaction) {
         if (interaction.customId === 'area') {
             userSelectArea.set(interaction.user.id, interaction.values[0]);
             await interaction.deferUpdate();
-            console.log(interaction.values[0]);
-            return;
+            return ;
         }
 
     } else if (interaction.isButton()) {
-        if (interaction.customId === 'send') {
-            const userSelect = userSelectArea.get(interaction.user.id);
-
-            if (!userSelect) {
-                return await interaction.reply('エリアを選択してください');
-            }
-
-
-            const url = `https://webservice.recruit.co.jp/hotpepper/gourmet/v1/?key=${process.env.API_KEY}&small_area=${userSelect}&format=json`
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    return await interaction.reply('もう一度お試し下さい');
-                }
-                const data = await response.json();
-
-                const randomIndex = Math.floor(Math.random() * data.results.shop.length);
-                const description1 = data.results.shop[randomIndex].shop_detail_memo || '';
-                const description2 = data.results.shop[randomIndex].close || '';
-
-                const replyEmbed = new EmbedBuilder()
-                    .setAuthor({
-                        name: 'Powered by ホットペッパーグルメ Webサービス',
-                        url: 'http://webservice.recruit.co.jp/'
-                    })
-                    .setColor(0x0099ff)
-                    .setTitle(data.results.shop[randomIndex].name)
-                    .setImage(data.results.shop[randomIndex].logo_image)
-                    .setDescription('定休日:' + data.results.shop[randomIndex].close + '\n' + data.results.shop[randomIndex].shop_detail_memo)
-                    .setURL(data.results.shop[randomIndex].urls.pc)
-                    .setFooter({ text: '画像提供：ホットペッパー グルメ' });
-
-                console.log('name:' + data.results.shop[randomIndex].name + '\n shopmemo:' + data.results.shop[randomIndex].shop_detail_memo +
-                    '\n close:' + data.results.shop[randomIndex].close
-                );
-
-                await interaction.reply({
-                    embeds: [replyEmbed]
-                })
-
-            } catch (e) {
-                console.error(e);
-                await interaction.reply({ content: '検索中にエラーが起きました💦', flags: MessageFlags.Ephemeral });
-            }
-        }
+        await handleSendButton(interaction, userSelectArea);
     }
 }

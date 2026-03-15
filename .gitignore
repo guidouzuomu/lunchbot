@@ -144,3 +144,4 @@ node_modules
 config.json
 test.js
 a.json
+launch.json
