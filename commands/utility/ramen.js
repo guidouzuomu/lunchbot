@@ -1,6 +1,6 @@
-import { SlashCommandBuilder, ContainerBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ActionRowBuilder, ButtonStyle, MessageFlags } from 'discord.js';
-import fs from 'fs';
+import { SlashCommandBuilder, ContainerBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import 'dotenv/config';
+
 
 
 export const data = new SlashCommandBuilder().setName('ramen').setDescription('Provide a random ramen pick!');
