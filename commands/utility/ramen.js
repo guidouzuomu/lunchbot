@@ -33,7 +33,7 @@ export async function execute(interaction) {
         .addSectionComponents((section) =>
             section
                 .addTextDisplayComponents((textDisplay) =>
-                    textDisplay.setContent('discription')
+                    textDisplay.setContent('description')
                 )
                 .setButtonAccessory((button) =>
                     button.setCustomId('sendRamen').setLabel('送信').setStyle(ButtonStyle.Primary),
