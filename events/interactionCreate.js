@@ -1,24 +1,34 @@
 import { Events, Collection, MessageFlags } from 'discord.js';
 import 'dotenv/config';
-import { handleSendButton } from '../interactions/sendButton.js';
 
-class ExpiringMap extends Map {
+class RecallApiMap extends Map {
     constructor(timeToAlive, entries) {
         super(entries);
         this.timeToAlive = timeToAlive;
         this._timeouts = new Map();
     }
 
-    set(key, value) {
-        if (this._timeouts.has(key)) {
-            clearTimeout(this._timeouts.get(key));
+    set(id, command, shops) {
+        if (this._timeouts.has(id)) {
+            clearTimeout(this._timeouts.get(id));
         }
         const timeout = setTimeout(() => {
-            super.delete(key);
-            this._timeouts.delete(key);
+            super.delete(id);
+            this._timeouts.delete(id);
         }, this.timeToAlive);
-        this._timeouts.set(key, timeout);
-        return super.set(key, value);
+        this._timeouts.set(id, timeout);
+
+        let userRecord = super.get(id);
+        if (!userRecord) {
+            userRecord = {};
+        }
+
+        userRecord[command] = {
+            count: shops.length,
+            shops: shops
+        }
+
+        return super.set(id, userRecord);
     }
 
     delete(key) {
@@ -38,10 +48,12 @@ class ExpiringMap extends Map {
     }
 }
 
-const userSelectArea = new ExpiringMap(180_000);
+const recallApi = new RecallApiMap(60 * 60 * 1000);
+
 
 export const name = Events.InteractionCreate;
 export async function execute(interaction) {
+
     if (interaction.isChatInputCommand() || interaction.isContextMenuCommand()) {
         const command = interaction.client.commands.get(interaction.commandName);
 
@@ -72,8 +84,10 @@ export async function execute(interaction) {
         timestamps.set(interaction.user.id, now);
         setTimeout(() => timestamps.delete(interaction.user.id), cooldownAmount);
 
+
         try {
-            await command.execute(interaction);
+            await command.execute(interaction, recallApi);
+
         } catch (error) {
             console.error(error);
             if (interaction.replied || interaction.deferred) {
@@ -88,15 +102,5 @@ export async function execute(interaction) {
                 });
             }
         }
-
-    } else if (interaction.isStringSelectMenu()) {
-        if (interaction.customId === 'area') {
-            userSelectArea.set(interaction.user.id, interaction.values[0]);
-            await interaction.deferUpdate();
-            return;
-        }
-
-    } else if (interaction.isButton()) {
-        await handleSendButton(interaction, userSelectArea);
     }
 }
