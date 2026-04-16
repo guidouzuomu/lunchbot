@@ -52,7 +52,7 @@ export async function execute(interaction, recallApi) {
             })
 
             if (!response.ok) {
-                return await interaction.reply('もう一度お試し下さい');
+                return await interaction.editReply({ content: 'もう一度お試し下さい' });
             }
 
             const data = await response.json();
