@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ContainerBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonStyle, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, ContainerBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonStyle, MessageFlags,EmbedBuilder } from 'discord.js';
 import 'dotenv/config';
 
 
@@ -6,44 +6,47 @@ import 'dotenv/config';
 export const data = new SlashCommandBuilder().setName('ramen').setDescription('Provide a random ramen pick!');
 
 export async function execute(interaction) {
-    const container = new ContainerBuilder()
-        .setAccentColor(0x0099ff)
-        .addTextDisplayComponents((textDisplay) =>
-            textDisplay.setContent(
-                'エリアを選択してください'
-            ),
-        )
-        .addActionRowComponents((actionRow) =>
-            actionRow.addComponents(new StringSelectMenuBuilder()
-                .setCustomId('area')
-                .setPlaceholder('エリアを選択してください')
-                .addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('駅周辺')
-                        .setDescription('aaa')
-                        .setValue('X949'),
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel('駅以外')
-                        .setDescription('bbb')
-                        .setValue('XLI5'),
-                )
-            ),
-        )
-        .addSeparatorComponents((separator) => separator)
-        .addSectionComponents((section) =>
-            section
-                .addTextDisplayComponents((textDisplay) =>
-                    textDisplay.setContent('description')
-                )
-                .setButtonAccessory((button) =>
-                    button.setCustomId('sendRamen').setLabel('送信').setStyle(ButtonStyle.Primary),
-                ),
-        )
+    try {
+        const url = 'https://places.googleapis.com/v1/places:searchText';
+        const API_KEY = process.env.GOOGLE_API_KEY
 
-    await interaction.reply({
-        components: [container],
-        flags: MessageFlags.IsComponentsV2,
-    });
+        const header = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": API_KEY,
+            "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.priceLevel,places.types,places.googleMapsUri,places.primaryType,places.businessStatus,nextPageToken",
+        }
+        const area = "会津若松 ラーメン";
+
+        const body = {
+            "textQuery": area,
+            "languageCode": "ja",
+            "minRating": 3.0,
+        }
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: header,
+            body: JSON.stringify(body)
+        })
+
+        if (!response.ok) {
+            return await interaction.reply('もう一度お試し下さい');
+        }
+        const data = await response.json();
+
+        const randomIndex = Math.floor(Math.random() * data.places.length);
+
+        const replyEmbed = new EmbedBuilder()
+            .setColor(0x0099ff)
+            .setTitle(data.places[randomIndex].displayName.text)
+            .setURL(data.places[randomIndex].googleMapsUri);
+
+        await interaction.reply({
+            embeds: [replyEmbed]
+        })
+    } catch (error) {
+        console.error(error);
+        await interaction.reply({ content: '検索中にエラーが起きました💦', flags: MessageFlags.Ephemeral });
+    }
 }
 
 
