@@ -8,7 +8,7 @@ class RecallApiMap extends Map {
         this._timeouts = new Map();
     }
 
-    set(id, command, shops) {
+    set(id, command, shops,nextPageToken) {
         if (this._timeouts.has(id)) {
             clearTimeout(this._timeouts.get(id));
         }
@@ -24,6 +24,7 @@ class RecallApiMap extends Map {
         }
 
         userRecord[command] = {
+            nextPageToken:nextPageToken,
             count: shops.length,
             shops: shops
         }
