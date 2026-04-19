@@ -1,19 +1,17 @@
-import { SlashCommandBuilder, ContainerBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ActionRowBuilder, ButtonStyle, MessageFlags, EmbedBuilder } from 'discord.js';
-import fs from 'fs';
+import { SlashCommandBuilder, MessageFlags, EmbedBuilder } from 'discord.js';
 import 'dotenv/config';
-
 
 export const data = new SlashCommandBuilder().setName('lunch').setDescription('Provide a random restaurant pick!');
 
 export async function execute(interaction, recallApi) {
     try {
-
         const userId = interaction.user.id;
         const userRecord = recallApi.get(userId);
         const commandName = interaction.commandName;
 
         if (userRecord && userRecord[commandName] && userRecord[commandName].count > 0) {
-            console.log("-------------------------------------------------------------------")
+
+
             const commandData = userRecord[commandName];
             const selectedShop = commandData.shops.shift();
             commandData.count = commandData.shops.length;
@@ -26,8 +24,17 @@ export async function execute(interaction, recallApi) {
                 embeds: [replyEmbed]
             })
 
+            console.log("-------------------------------------------------------------------")
+            console.log(`[INFO]
+                USER: ${interaction.user.tag}
+                COMMAND: /${commandName}
+                RESULTS: ${selectedShop.displayName.text}
+                ${commandData.count} items left`);
+            console.log("-------------------------------------------------------------------")
+
         } else {
-            console.log("|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")
+
+
 
             await interaction.deferReply();
             const url = 'https://places.googleapis.com/v1/places:searchText';
@@ -36,7 +43,7 @@ export async function execute(interaction, recallApi) {
             const header = {
                 "Content-Type": "application/json",
                 "X-Goog-Api-Key": API_KEY,
-                "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.priceLevel,places.types,places.googleMapsUri,places.primaryType,places.businessStatus",
+                "X-Goog-FieldMask": "places.displayName,places.googleMapsUri,nextPageToken",
             }
             const area = "会津若松 ランチ";
 
@@ -45,6 +52,12 @@ export async function execute(interaction, recallApi) {
                 "languageCode": "ja",
                 "minRating": 3.0,
             }
+
+            if (userRecord && userRecord[commandName] && userRecord[commandName].nextPageToken) {
+                const token = userRecord.lunch.nextPageToken;
+                body.pageToken = token;
+            }
+
             const response = await fetch(url, {
                 method: 'POST',
                 headers: header,
@@ -58,12 +71,25 @@ export async function execute(interaction, recallApi) {
             const data = await response.json();
 
             const shops = data.places;
+            const nextPageToken = data.nextPageToken;
+
             shops.sort(() => Math.random() - 0.5);
             recallApi.set(userId, commandName, shops);
+            recallApi.set(userId, commandName, shops, nextPageToken);
+
 
             const newCommandData = recallApi.get(userId)[commandName];
             const selectedShop = newCommandData.shops.shift();
             newCommandData.count = newCommandData.shops.length;
+
+
+            console.log("-------------------------------------------------------------------")
+            console.log(`[INFO]
+                USER: ${interaction.user.tag}
+                COMMAND: /${commandName}
+                RESULTS: ${selectedShop.displayName.text}
+                fetch api get ${newCommandData.count} items`);
+            console.log("-------------------------------------------------------------------")
 
             const replyEmbed = new EmbedBuilder()
                 .setColor(0x0099ff)

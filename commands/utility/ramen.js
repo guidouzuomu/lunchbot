@@ -1,7 +1,5 @@
-import { SlashCommandBuilder, ContainerBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ActionRowBuilder, ButtonStyle, MessageFlags, EmbedBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags, EmbedBuilder } from 'discord.js';
 import 'dotenv/config';
-
-
 
 export const data = new SlashCommandBuilder().setName('ramen').setDescription('Provide a random ramen pick!');
 
@@ -12,7 +10,7 @@ export async function execute(interaction, recallApi) {
         const commandName = interaction.commandName;
 
         if (userRecord && userRecord[commandName] && userRecord[commandName].count > 0) {
-            console.log("-------------------------------------------------------------------")
+
             const commandData = userRecord[commandName];
             const selectedShop = commandData.shops.shift();
             commandData.count = commandData.shops.length;
@@ -25,8 +23,15 @@ export async function execute(interaction, recallApi) {
                 embeds: [replyEmbed]
             })
 
+            console.log("-------------------------------------------------------------------")
+            console.log(`[INFO]
+                USER: ${interaction.user.tag}
+                COMMAND: /${commandName}
+                RESULTS: ${selectedShop.displayName.text}
+                ${commandData.count} items left`);
+            console.log("-------------------------------------------------------------------")
+
         } else {
-            console.log("|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")
 
             await interaction.deferReply();
             const url = 'https://places.googleapis.com/v1/places:searchText';
@@ -46,12 +51,9 @@ export async function execute(interaction, recallApi) {
             }
 
             if (userRecord && userRecord[commandName] && userRecord[commandName].nextPageToken) {
-                console.log(1);
-
                 const token = userRecord.ramen.nextPageToken;
                 body.pageToken = token;
             }
-
 
             const response = await fetch(url, {
                 method: 'POST',
@@ -65,7 +67,6 @@ export async function execute(interaction, recallApi) {
             }
 
             const data = await response.json();
-            // console.log(data);
 
             const shops = data.places;
             const nextPageToken = data.nextPageToken;
@@ -75,6 +76,15 @@ export async function execute(interaction, recallApi) {
             const newCommandData = recallApi.get(userId)[commandName];
             const selectedShop = newCommandData.shops.shift();
             newCommandData.count = newCommandData.shops.length;
+
+
+            console.log("-------------------------------------------------------------------")
+            console.log(`[INFO]
+                USER: ${interaction.user.tag}
+                COMMAND: /${commandName}
+                RESULTS: ${selectedShop.displayName.text}
+                fetch api get ${newCommandData.count} items`);
+            console.log("-------------------------------------------------------------------")
 
             const replyEmbed = new EmbedBuilder()
                 .setColor(0x0099ff)
